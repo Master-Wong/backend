@@ -1,24 +1,25 @@
 import { randomUUID } from 'node:crypto';
+import type { PaymentMethod, PaymentResult } from '../types/donation.types.js';
 
 const PAYMENT_SUCCESS_DELAY_MS = 800;
 const PAYMENT_FAILURE_DELAY_MS = 5000;
 
-function delay(ms) {
+function delay(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
 }
 
-function isFailureAmount(amount) {
+function isFailureAmount(amount: number): boolean {
   const normalized = Math.floor(Math.abs(Number(amount)));
   return normalized % 10 === 1;
 }
 
-function resolveSimulationOutcome({ amount }) {
+function resolveSimulationOutcome(amount: number): boolean {
   return !isFailureAmount(amount);
 }
 
-function buildFailureResult(paymentMethod) {
+function buildFailureResult(paymentMethod: PaymentMethod): PaymentResult {
   if (paymentMethod === 'mpesa') {
     return {
       success: false,
@@ -32,7 +33,7 @@ function buildFailureResult(paymentMethod) {
   };
 }
 
-function buildSuccessResult(paymentMethod) {
+function buildSuccessResult(paymentMethod: PaymentMethod): PaymentResult {
   const prefix = paymentMethod === 'mpesa' ? 'MPESA' : 'CARD';
 
   return {
@@ -41,8 +42,14 @@ function buildSuccessResult(paymentMethod) {
   };
 }
 
-async function processPayment({ paymentMethod, amount }) {
-  const success = resolveSimulationOutcome({ amount });
+async function processPayment({
+  paymentMethod,
+  amount,
+}: {
+  paymentMethod: PaymentMethod;
+  amount: number;
+}): Promise<PaymentResult> {
+  const success = resolveSimulationOutcome(amount);
 
   await delay(success ? PAYMENT_SUCCESS_DELAY_MS : PAYMENT_FAILURE_DELAY_MS);
 

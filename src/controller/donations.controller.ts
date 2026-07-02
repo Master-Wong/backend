@@ -1,15 +1,24 @@
+import type { Request, Response } from 'express';
 import { validateDonationPayload } from '../validators/donationValidator.js';
 import { processPayment } from '../services/paymentSimulator.services.js';
 import { getDonation, saveDonation } from '../store/donationStore.store.js';
+import type {
+  DonationReceiptResponse,
+  StoredDonationInput,
+  ValidatedDonation,
+} from '../types/donation.types.js';
 
-function maskCardNumber(cardNumber) {
+function maskCardNumber(cardNumber: string): string {
   const digits = cardNumber.replace(/\s/g, '');
   const last4 = digits.slice(-4);
   return `**** **** **** ${last4}`;
 }
 
-function buildStoredRecord(donation, transactionId) {
-  const record = {
+function buildStoredRecord(
+  donation: ValidatedDonation,
+  transactionId: string,
+): StoredDonationInput {
+  const record: StoredDonationInput = {
     transactionId,
     status: 'completed',
     name: donation.isAnonymous ? 'Anonymous' : donation.name,
@@ -31,7 +40,16 @@ function buildStoredRecord(donation, transactionId) {
   return record;
 }
 
-function formatReceiptResponse(donation) {
+function formatReceiptResponse(donation: {
+  transactionId: string;
+  status: string;
+  name: string;
+  email: string;
+  amount: number;
+  paymentMethod: ValidatedDonation['paymentMethod'];
+  isAnonymous: boolean;
+  createdAt: string;
+}): DonationReceiptResponse {
   return {
     transactionId: donation.transactionId,
     status: donation.status,
@@ -44,7 +62,7 @@ function formatReceiptResponse(donation) {
   };
 }
 
-export const sendDonations = async (req, res) => {
+export const sendDonations = async (req: Request, res: Response): Promise<Response> => {
   const validation = validateDonationPayload(req.body);
 
   if (!validation.valid) {
@@ -78,8 +96,10 @@ export const sendDonations = async (req, res) => {
   });
 };
 
-export const getDonationById = (req, res) => {
-  const donation = getDonation(req.params.transactionId);
+export const getDonationById = (req: Request, res: Response): Response => {
+  const { transactionId } = req.params;
+  const id = Array.isArray(transactionId) ? transactionId[0] : transactionId;
+  const donation = getDonation(id);
 
   if (!donation) {
     return res.status(404).json({ error: 'Donation not found' });

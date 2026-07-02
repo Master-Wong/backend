@@ -1,9 +1,31 @@
-const VALID_PAYMENT_METHODS = ['mpesa', 'card'];
+import type {
+  CardDonation,
+  DonationRequestBody,
+  MpesaDonation,
+  PaymentMethod,
+  ValidationResult,
+} from '../types/donation.types.js';
+
+const VALID_PAYMENT_METHODS: PaymentMethod[] = ['mpesa', 'card'];
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const EXPIRY_REGEX = /^(0[1-9]|1[0-2])\/(\d{2})$/;
 const CVC_REGEX = /^\d{3,4}$/;
 
-function normalizePhoneNumber(phone) {
+interface CardFieldInput {
+  cardNumber?: unknown;
+  nameOnCard?: unknown;
+  expiry?: unknown;
+  cvc?: unknown;
+}
+
+interface CardFieldResult {
+  cardNumber: string;
+  nameOnCard: string;
+  expiry: string;
+  cvc: string;
+}
+
+function normalizePhoneNumber(phone: string): string {
   let digits = phone.replace(/\D/g, '');
 
   if (digits.startsWith('0') && digits.length === 10) {
@@ -15,12 +37,12 @@ function normalizePhoneNumber(phone) {
   return digits;
 }
 
-function isValidKenyanPhone(phone) {
+function isValidKenyanPhone(phone: string): boolean {
   const normalized = normalizePhoneNumber(phone);
   return /^2547\d{8}$/.test(normalized);
 }
 
-function isValidExpiry(expiry) {
+function isValidExpiry(expiry: string): boolean {
   const match = EXPIRY_REGEX.exec(expiry.trim());
 
   if (!match) {
@@ -35,7 +57,10 @@ function isValidExpiry(expiry) {
   return expiryEnd >= now;
 }
 
-function validateMpesaFields(body, details) {
+function validateMpesaFields(
+  body: { phoneNumber?: unknown },
+  details: string[],
+): string | null {
   const { phoneNumber } = body;
 
   if (phoneNumber === undefined || phoneNumber === null || phoneNumber === '') {
@@ -56,9 +81,12 @@ function validateMpesaFields(body, details) {
   return normalizePhoneNumber(phoneNumber.trim());
 }
 
-function validateCardFields(body, details) {
+function validateCardFields(
+  body: CardFieldInput,
+  details: string[],
+): CardFieldResult | null {
   const { cardNumber, nameOnCard, expiry, cvc } = body;
-  const result = {};
+  const result: Partial<CardFieldResult> = {};
   let valid = true;
 
   if (cardNumber === undefined || cardNumber === null || cardNumber === '') {
@@ -108,11 +136,11 @@ function validateCardFields(body, details) {
     result.cvc = cvc.trim();
   }
 
-  return valid ? result : null;
+  return valid ? (result as CardFieldResult) : null;
 }
 
-function validateDonationPayload(body) {
-  const details = [];
+function validateDonationPayload(body: DonationRequestBody | undefined): ValidationResult {
+  const details: string[] = [];
   const {
     name,
     email,
@@ -148,7 +176,7 @@ function validateDonationPayload(body) {
 
   if (paymentMethod === undefined || paymentMethod === null || paymentMethod === '') {
     details.push('Payment method is required');
-  } else if (!VALID_PAYMENT_METHODS.includes(String(paymentMethod).toLowerCase())) {
+  } else if (!VALID_PAYMENT_METHODS.includes(String(paymentMethod).toLowerCase() as PaymentMethod)) {
     details.push('Payment method must be mpesa or card');
   }
 
@@ -166,10 +194,10 @@ function validateDonationPayload(body) {
     return { valid: false, details };
   }
 
-  const method = String(paymentMethod).toLowerCase();
-  const data = {
-    name: name.trim(),
-    email: email.trim().toLowerCase(),
+  const method = String(paymentMethod).toLowerCase() as PaymentMethod;
+  const base = {
+    name: (name as string).trim(),
+    email: (email as string).trim().toLowerCase(),
     amount: Number(amount),
     paymentMethod: method,
     isAnonymous: anonymous,
@@ -178,30 +206,35 @@ function validateDonationPayload(body) {
   if (method === 'mpesa') {
     const normalizedPhone = validateMpesaFields({ phoneNumber }, details);
 
-    if (details.length > 0) {
+    if (details.length > 0 || !normalizedPhone) {
       return { valid: false, details };
     }
 
-    data.phoneNumber = normalizedPhone;
+    const data: MpesaDonation = {
+      ...base,
+      paymentMethod: 'mpesa',
+      phoneNumber: normalizedPhone,
+    };
+
+    return { valid: true, data };
   }
 
-  if (method === 'card') {
-    const cardData = validateCardFields(
-      { cardNumber, nameOnCard, expiry, cvc },
-      details,
-    );
+  const cardData = validateCardFields(
+    { cardNumber, nameOnCard, expiry, cvc },
+    details,
+  );
 
-    if (!cardData) {
-      return { valid: false, details };
-    }
-
-    Object.assign(data, cardData);
+  if (!cardData) {
+    return { valid: false, details };
   }
 
-  return {
-    valid: true,
-    data,
+  const data: CardDonation = {
+    ...base,
+    paymentMethod: 'card',
+    ...cardData,
   };
+
+  return { valid: true, data };
 }
 
 export {
