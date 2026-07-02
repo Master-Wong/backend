@@ -2,10 +2,6 @@ import { randomUUID } from 'node:crypto';
 
 const PAYMENT_SUCCESS_DELAY_MS = 800;
 const PAYMENT_FAILURE_DELAY_MS = 5000;
-const MPESA_SUCCESS_RATE = 0.9;
-const CARD_SUCCESS_RATE = 0.85;
-const TRIGGER_AMOUNT_SUCCESS = 1000;
-const TRIGGER_AMOUNT_FAILURE = 1001;
 
 function delay(ms) {
   return new Promise((resolve) => {
@@ -13,16 +9,13 @@ function delay(ms) {
   });
 }
 
-function resolveSimulationOutcome({ amount, successRate }) {
-  if (amount === TRIGGER_AMOUNT_SUCCESS) {
-    return true;
-  }
+function isFailureAmount(amount) {
+  const normalized = Math.floor(Math.abs(Number(amount)));
+  return normalized % 10 === 1;
+}
 
-  if (amount === TRIGGER_AMOUNT_FAILURE) {
-    return false;
-  }
-
-  return Math.random() < successRate;
+function resolveSimulationOutcome({ amount }) {
+  return !isFailureAmount(amount);
 }
 
 function buildFailureResult(paymentMethod) {
@@ -49,8 +42,7 @@ function buildSuccessResult(paymentMethod) {
 }
 
 async function processPayment({ paymentMethod, amount }) {
-  const successRate = paymentMethod === 'mpesa' ? MPESA_SUCCESS_RATE : CARD_SUCCESS_RATE;
-  const success = resolveSimulationOutcome({ amount, successRate });
+  const success = resolveSimulationOutcome({ amount });
 
   await delay(success ? PAYMENT_SUCCESS_DELAY_MS : PAYMENT_FAILURE_DELAY_MS);
 
@@ -63,6 +55,5 @@ async function processPayment({ paymentMethod, amount }) {
 
 export {
   processPayment,
-  TRIGGER_AMOUNT_SUCCESS,
-  TRIGGER_AMOUNT_FAILURE,
+  isFailureAmount,
 };

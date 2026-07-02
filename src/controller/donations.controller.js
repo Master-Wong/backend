@@ -1,6 +1,6 @@
 import { validateDonationPayload } from '../validators/donationValidator.js';
 import { processPayment } from '../services/paymentSimulator.services.js';
-import { saveDonation } from '../store/donationStore.store.js';
+import { getDonation, saveDonation } from '../store/donationStore.store.js';
 
 function maskCardNumber(cardNumber) {
   const digits = cardNumber.replace(/\s/g, '');
@@ -29,6 +29,19 @@ function buildStoredRecord(donation, transactionId) {
   }
 
   return record;
+}
+
+function formatReceiptResponse(donation) {
+  return {
+    transactionId: donation.transactionId,
+    status: donation.status,
+    donorName: donation.name,
+    email: donation.email,
+    amount: donation.amount,
+    paymentMethod: donation.paymentMethod,
+    isAnonymous: donation.isAnonymous,
+    createdAt: donation.createdAt,
+  };
 }
 
 export const sendDonations = async (req, res) => {
@@ -63,4 +76,14 @@ export const sendDonations = async (req, res) => {
     paymentMethod: savedDonation.paymentMethod,
     isAnonymous: savedDonation.isAnonymous,
   });
+};
+
+export const getDonationById = (req, res) => {
+  const donation = getDonation(req.params.transactionId);
+
+  if (!donation) {
+    return res.status(404).json({ error: 'Donation not found' });
+  }
+
+  return res.status(200).json(formatReceiptResponse(donation));
 };

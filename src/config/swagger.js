@@ -37,7 +37,7 @@ const swaggerDocument = {
         description:
           'Validates the request and simulates payment via M-Pesa or Card. ' +
           'Successful donations are stored in an in-memory store for the duration of the server process. ' +
-          'Use amount 1000 to force success or 1001 to force failure. ' +
+          'Payments fail automatically when the amount ends in 1 (e.g. 1, 11, 501, 1001). ' +
           'When paymentMethod is mpesa, phoneNumber is required. ' +
           'When paymentMethod is card, cardNumber, nameOnCard, expiry, and cvc are all required in the request. ' +
           'For card payments, only nameOnCard and a masked cardNumber are persisted; expiry and cvc are never stored.',
@@ -76,6 +76,44 @@ const swaggerDocument = {
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/PaymentErrorResponse' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/donations/{transactionId}': {
+      get: {
+        summary: 'Get donation receipt',
+        description: 'Returns receipt details for a successful donation by transaction ID.',
+        tags: ['Donations'],
+        parameters: [
+          {
+            name: 'transactionId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', example: 'MPESA-A1B2C3D4' },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Donation found',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/DonationReceiptResponse' },
+              },
+            },
+          },
+          404: {
+            description: 'Donation not found',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    error: { type: 'string', example: 'Donation not found' },
+                  },
+                },
               },
             },
           },
@@ -138,6 +176,19 @@ const swaggerDocument = {
           amount: { type: 'number', example: 500 },
           paymentMethod: { type: 'string', example: 'mpesa' },
           isAnonymous: { type: 'boolean', example: false },
+        },
+      },
+      DonationReceiptResponse: {
+        type: 'object',
+        properties: {
+          transactionId: { type: 'string', example: 'MPESA-A1B2C3D4' },
+          status: { type: 'string', example: 'completed' },
+          donorName: { type: 'string', example: 'Jane Doe' },
+          email: { type: 'string', example: 'jane@example.com' },
+          amount: { type: 'number', example: 1000 },
+          paymentMethod: { type: 'string', example: 'mpesa' },
+          isAnonymous: { type: 'boolean', example: false },
+          createdAt: { type: 'string', format: 'date-time', example: '2026-07-02T09:52:32.000Z' },
         },
       },
       ErrorResponse: {
