@@ -31,7 +31,162 @@ const swaggerDocument = {
         },
       },
     },
+    '/api/donations': {
+      post: {
+        summary: 'Submit a donation',
+        description:
+          'Validates the request and simulates payment via M-Pesa or Card. ' +
+          'Successful donations are stored in an in-memory store for the duration of the server process. ' +
+          'Use amount 1000 to force success or 1001 to force failure. ' +
+          'When paymentMethod is mpesa, phoneNumber is required. ' +
+          'When paymentMethod is card, cardNumber, nameOnCard, expiry, and cvc are all required in the request. ' +
+          'For card payments, only nameOnCard and a masked cardNumber are persisted; expiry and cvc are never stored.',
+        tags: ['Donations'],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/DonationRequest' },
+              examples: {
+                mpesa: { $ref: '#/components/examples/MpesaDonationRequest' },
+                card: { $ref: '#/components/examples/CardDonationRequest' },
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Donation processed successfully',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/DonationSuccessResponse' },
+              },
+            },
+          },
+          400: {
+            description: 'Validation failed',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+          402: {
+            description: 'Payment failed',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/PaymentErrorResponse' },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  components: {
+    schemas: {
+      DonationRequest: {
+        type: 'object',
+        required: ['name', 'email', 'amount', 'paymentMethod'],
+        properties: {
+          name: { type: 'string', example: 'Jane Doe' },
+          email: { type: 'string', format: 'email', example: 'jane@example.com' },
+          amount: { type: 'number', minimum: 0.01, example: 500 },
+          paymentMethod: {
+            type: 'string',
+            enum: ['mpesa', 'card'],
+            example: 'mpesa',
+          },
+          isAnonymous: {
+            type: 'boolean',
+            default: false,
+            example: false,
+          },
+          phoneNumber: {
+            type: 'string',
+            description: 'Required when paymentMethod is mpesa.',
+            example: '254700000000',
+          },
+          cardNumber: {
+            type: 'string',
+            description: 'Required when paymentMethod is card. Full PAN accepted for validation; only masked value is stored.',
+            example: '4111111111111111',
+          },
+          nameOnCard: {
+            type: 'string',
+            description: 'Required when paymentMethod is card.',
+            example: 'Jane Doe',
+          },
+          expiry: {
+            type: 'string',
+            description: 'Required when paymentMethod is card (MM/YY). Not stored after processing.',
+            example: '12/28',
+          },
+          cvc: {
+            type: 'string',
+            description: 'Required when paymentMethod is card. Not stored after processing.',
+            example: '123',
+          },
+        },
+      },
+      DonationSuccessResponse: {
+        type: 'object',
+        properties: {
+          transactionId: { type: 'string', example: 'MPESA-A1B2C3D4' },
+          status: { type: 'string', example: 'completed' },
+          message: { type: 'string', example: 'Donation received successfully.' },
+          amount: { type: 'number', example: 500 },
+          paymentMethod: { type: 'string', example: 'mpesa' },
+          isAnonymous: { type: 'boolean', example: false },
+        },
+      },
+      ErrorResponse: {
+        type: 'object',
+        properties: {
+          error: { type: 'string', example: 'Validation failed' },
+          details: {
+            type: 'array',
+            items: { type: 'string' },
+            example: ['Phone number is required for M-Pesa payments'],
+          },
+        },
+      },
+      PaymentErrorResponse: {
+        type: 'object',
+        properties: {
+          error: { type: 'string', example: 'Payment failed' },
+          message: { type: 'string', example: 'M-Pesa STK push was declined or timed out. Please try again.' },
+        },
+      },
+    },
+    examples: {
+      MpesaDonationRequest: {
+        summary: 'M-Pesa donation',
+        value: {
+          name: 'Jane Doe',
+          email: 'jane@example.com',
+          amount: 500,
+          paymentMethod: 'mpesa',
+          phoneNumber: '254700000000',
+          isAnonymous: false,
+        },
+      },
+      CardDonationRequest: {
+        summary: 'Card donation',
+        value: {
+          name: 'Jane Doe',
+          email: 'jane@example.com',
+          amount: 500,
+          paymentMethod: 'card',
+          cardNumber: '4111111111111111',
+          nameOnCard: 'Jane Doe',
+          expiry: '12/28',
+          cvc: '123',
+          isAnonymous: true,
+        },
+      },
+    },
   },
 };
 
-module.exports = swaggerDocument;
+export default swaggerDocument;
