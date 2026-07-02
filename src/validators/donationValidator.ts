@@ -26,6 +26,7 @@ interface CardFieldResult {
 }
 
 function normalizePhoneNumber(phone: string): string {
+  // Convert local Kenyan formats to 2547XXXXXXXX.
   let digits = phone.replace(/\D/g, '');
 
   if (digits.startsWith('0') && digits.length === 10) {
@@ -38,11 +39,13 @@ function normalizePhoneNumber(phone: string): string {
 }
 
 function isValidKenyanPhone(phone: string): boolean {
+  // Validate normalized Safaricom-style numbers.
   const normalized = normalizePhoneNumber(phone);
   return /^2547\d{8}$/.test(normalized);
 }
 
 function isValidExpiry(expiry: string): boolean {
+  // Ensure MM/YY expiry is present and not in the past.
   const match = EXPIRY_REGEX.exec(expiry.trim());
 
   if (!match) {
@@ -61,6 +64,7 @@ function validateMpesaFields(
   body: { phoneNumber?: unknown },
   details: string[],
 ): string | null {
+  // Validate and normalize M-Pesa phone input.
   const { phoneNumber } = body;
 
   if (phoneNumber === undefined || phoneNumber === null || phoneNumber === '') {
@@ -85,6 +89,7 @@ function validateCardFields(
   body: CardFieldInput,
   details: string[],
 ): CardFieldResult | null {
+  // Validate card number, name, expiry, and CVC fields.
   const { cardNumber, nameOnCard, expiry, cvc } = body;
   const result: Partial<CardFieldResult> = {};
   let valid = true;
@@ -140,6 +145,7 @@ function validateCardFields(
 }
 
 function validateDonationPayload(body: DonationRequestBody | undefined): ValidationResult {
+  // Validate shared fields then method-specific payment details.
   const details: string[] = [];
   const {
     name,

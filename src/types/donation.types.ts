@@ -1,4 +1,5 @@
 export type PaymentMethod = 'mpesa' | 'card';
+export type DonationStatus = 'pending' | 'completed' | 'failed';
 
 export interface DonationRequestBody {
   name?: unknown;
@@ -42,7 +43,7 @@ export type ValidationResult =
 
 export interface StoredDonationInput {
   transactionId: string;
-  status: 'completed';
+  status: DonationStatus;
   name: string;
   email: string;
   amount: number;
@@ -51,31 +52,55 @@ export interface StoredDonationInput {
   phoneNumber?: string;
   nameOnCard?: string;
   cardNumber?: string;
+  checkoutRequestId?: string;
+  failureMessage?: string;
 }
 
 export interface StoredDonation extends StoredDonationInput {
   createdAt: string;
+  updatedAt: string;
 }
 
-export interface DonationReceiptResponse {
+export interface DonationStatusResponse {
   transactionId: string;
-  status: string;
-  donorName: string;
-  email: string;
+  status: DonationStatus;
   amount: number;
   paymentMethod: PaymentMethod;
   isAnonymous: boolean;
   createdAt: string;
+  updatedAt: string;
+  message?: string;
+  failureMessage?: string;
+  donorName?: string;
+  email?: string;
 }
 
-export type PaymentSuccessResult = {
-  success: true;
+export interface DonationCreateResponse {
   transactionId: string;
-};
-
-export type PaymentFailureResult = {
-  success: false;
+  status: DonationStatus;
   message: string;
-};
+  amount: number;
+  paymentMethod: PaymentMethod;
+  isAnonymous: boolean;
+}
 
-export type PaymentResult = PaymentSuccessResult | PaymentFailureResult;
+export type CardChargeResult =
+  | { success: true }
+  | { success: false; message: string };
+
+export interface IdempotentCachedResponse {
+  statusCode: number;
+  body: unknown;
+  headers?: Record<string, string>;
+  requestHash: string;
+  expiresAt: number;
+}
+
+declare global {
+  namespace Express {
+    interface Request {
+      idempotencyKey?: string;
+      idempotencyBodyHash?: string;
+    }
+  }
+}

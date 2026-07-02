@@ -35,13 +35,24 @@ const swaggerDocument = {
       post: {
         summary: 'Submit a donation',
         description:
-          'Validates the request and simulates payment via M-Pesa or Card. ' +
-          'Successful donations are stored in an in-memory store for the duration of the server process. ' +
+          'Creates a donation resource and processes payment. ' +
+          'M-Pesa is asynchronous: returns 202 with status pending, then resolves via simulated STK callback — poll GET until completed or failed. ' +
+          'Card is synchronous: returns 201 on success or 402 on failure. ' +
+          'Requires Idempotency-Key header to prevent duplicate charges on retries. ' +
           'Payments fail automatically when the amount ends in 1 (e.g. 1, 11, 501, 1001). ' +
           'When paymentMethod is mpesa, phoneNumber is required. ' +
           'When paymentMethod is card, cardNumber, nameOnCard, expiry, and cvc are all required in the request. ' +
           'For card payments, only nameOnCard and a masked cardNumber are persisted; expiry and cvc are never stored.',
         tags: ['Donations'],
+        parameters: [
+          {
+            name: 'Idempotency-Key',
+            in: 'header',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Unique key per payment attempt. Replays return the original response.',
+          },
+        ],
         requestBody: {
           required: true,
           content: {
@@ -56,10 +67,24 @@ const swaggerDocument = {
         },
         responses: {
           201: {
-            description: 'Donation processed successfully',
+            description: 'Card donation completed synchronously',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/DonationSuccessResponse' },
+                schema: { $ref: '#/components/schemas/DonationCreateResponse' },
+              },
+            },
+          },
+          202: {
+            description: 'M-Pesa STK push initiated — donation is pending',
+            headers: {
+              Location: {
+                schema: { type: 'string' },
+                description: 'URL to poll for donation status',
+              },
+            },
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/DonationCreateResponse' },
               },
             },
           },
@@ -72,10 +97,26 @@ const swaggerDocument = {
             },
           },
           402: {
-            description: 'Payment failed',
+            description: 'Card payment failed',
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/PaymentErrorResponse' },
+              },
+            },
+          },
+          409: {
+            description: 'Idempotency-Key reused with a different request body',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ConflictResponse' },
+              },
+            },
+          },
+          429: {
+            description: 'Rate limit exceeded',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/RateLimitResponse' },
               },
             },
           },
@@ -84,8 +125,9 @@ const swaggerDocument = {
     },
     '/api/donations/{transactionId}': {
       get: {
-        summary: 'Get donation receipt',
-        description: 'Returns receipt details for a successful donation by transaction ID.',
+        summary: 'Get donation status',
+        description:
+          'Returns the current donation resource state. Poll this endpoint after a 202 M-Pesa response until status is completed or failed.',
         tags: ['Donations'],
         parameters: [
           {
@@ -97,10 +139,10 @@ const swaggerDocument = {
         ],
         responses: {
           200: {
-            description: 'Donation found',
+            description: 'Donation found (pending, completed, or failed)',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/DonationReceiptResponse' },
+                schema: { $ref: '#/components/schemas/DonationStatusResponse' },
               },
             },
           },
@@ -167,28 +209,31 @@ const swaggerDocument = {
           },
         },
       },
-      DonationSuccessResponse: {
+      DonationCreateResponse: {
         type: 'object',
         properties: {
           transactionId: { type: 'string', example: 'MPESA-A1B2C3D4' },
-          status: { type: 'string', example: 'completed' },
-          message: { type: 'string', example: 'Donation received successfully.' },
+          status: { type: 'string', enum: ['pending', 'completed'], example: 'pending' },
+          message: { type: 'string', example: 'STK push sent. Confirm on your phone.' },
           amount: { type: 'number', example: 500 },
           paymentMethod: { type: 'string', example: 'mpesa' },
           isAnonymous: { type: 'boolean', example: false },
         },
       },
-      DonationReceiptResponse: {
+      DonationStatusResponse: {
         type: 'object',
         properties: {
           transactionId: { type: 'string', example: 'MPESA-A1B2C3D4' },
-          status: { type: 'string', example: 'completed' },
-          donorName: { type: 'string', example: 'Jane Doe' },
-          email: { type: 'string', example: 'jane@example.com' },
+          status: { type: 'string', enum: ['pending', 'completed', 'failed'], example: 'completed' },
           amount: { type: 'number', example: 1000 },
           paymentMethod: { type: 'string', example: 'mpesa' },
           isAnonymous: { type: 'boolean', example: false },
           createdAt: { type: 'string', format: 'date-time', example: '2026-07-02T09:52:32.000Z' },
+          updatedAt: { type: 'string', format: 'date-time', example: '2026-07-02T09:52:35.000Z' },
+          message: { type: 'string', example: 'Donation received successfully.' },
+          donorName: { type: 'string', example: 'Jane Doe' },
+          email: { type: 'string', example: 'jane@example.com' },
+          failureMessage: { type: 'string', example: 'M-Pesa STK push was declined or timed out.' },
         },
       },
       ErrorResponse: {
@@ -207,6 +252,20 @@ const swaggerDocument = {
         properties: {
           error: { type: 'string', example: 'Payment failed' },
           message: { type: 'string', example: 'M-Pesa STK push was declined or timed out. Please try again.' },
+        },
+      },
+      ConflictResponse: {
+        type: 'object',
+        properties: {
+          error: { type: 'string', example: 'Idempotency conflict' },
+          message: { type: 'string', example: 'Idempotency-Key was already used with a different request body.' },
+        },
+      },
+      RateLimitResponse: {
+        type: 'object',
+        properties: {
+          error: { type: 'string', example: 'Too many requests' },
+          message: { type: 'string', example: 'Rate limit exceeded. Please try again later.' },
         },
       },
     },
