@@ -7,6 +7,7 @@ interface HttpError extends Error {
 }
 
 function resolveStatus(err: HttpError): number {
+  // invalid json body, syntax error, or other parsing issue
   if (err.type === 'entity.parse.failed' || err instanceof SyntaxError) {
     return 400;
   }
@@ -20,7 +21,7 @@ function resolveStatus(err: HttpError): number {
 }
 
 export function notFoundHandler(_req: Request, res: Response): Response {
-  // Return JSON for routes that do not exist.
+  // Wrong path or typo  
   return res.status(404).json({
     error: 'Not found',
     message: 'The requested resource does not exist.',
@@ -33,7 +34,7 @@ export function errorHandler(
   res: Response,
   _next: NextFunction,
 ): Response {
-  // Map thrown errors to consistent JSON responses.
+  // Handle errors and send appropriate responses based on the error type and status code.
   const status = resolveStatus(err);
   const isClientError = status >= 400 && status < 500;
 
