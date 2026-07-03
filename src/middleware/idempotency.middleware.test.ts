@@ -6,6 +6,7 @@ import {
   saveIdempotentResponse,
 } from '../store/idempotencyStore.store.js';
 
+
 function createMockResponse() {
   const res = {
     statusCode: 200,
@@ -32,15 +33,16 @@ function createMockResponse() {
 }
 
 describe('idempotencyMiddleware', () => {
-  it('returns 400 when Idempotency-Key is missing', () => {
-    const req = { header: () => undefined, body: {} } as Request;
+  it('generates a key and calls next when Idempotency-Key is missing', () => {
+    const req = { header: () => undefined, body: { amount: 1000 } } as unknown as Request;
     const res = createMockResponse();
     const next = vi.fn() as NextFunction;
 
     idempotencyMiddleware(req, res, next);
 
-    expect(res.statusCode).toBe(400);
-    expect(next).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalledOnce();
+    expect(req.idempotencyKey).toBeTruthy();          // a key was generated
+    expect(res.headers['Idempotency-Key']).toBe(req.idempotencyKey); // echoed back
   });
 
   it('replays a cached response for the same key and body', () => {
@@ -93,5 +95,16 @@ describe('idempotencyMiddleware', () => {
 
     expect(next).toHaveBeenCalledOnce();
     expect(req.idempotencyKey).toBeTruthy();
+  });
+  it('echoes the client-supplied key back in the response header', () => {
+    const key = `echo-key-${Date.now()}`;
+    const req = { header: () => key, body: { amount: 1000 } } as unknown as Request;
+    const res = createMockResponse();
+    const next = vi.fn() as NextFunction;
+
+    idempotencyMiddleware(req, res, next);
+
+    expect(res.headers['Idempotency-Key']).toBe(key);
+    expect(next).toHaveBeenCalledOnce();
   });
 });

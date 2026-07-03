@@ -3,21 +3,17 @@ import {
   getIdempotentResponse,
   hashRequestBody,
 } from '../store/idempotencyStore.store.js';
+import { randomUUID } from 'node:crypto';
 
 export function idempotencyMiddleware(
   req: Request,
   res: Response,
   next: NextFunction,
 ): Response | void {
-  // Enforce idempotency key, replay cached responses, or continue.
-  const idempotencyKey = req.header('Idempotency-Key')?.trim();
+  // a client-supplied key; otherwise generate one so a plain POST still works.
+  const idempotencyKey = req.header('Idempotency-Key')?.trim() || randomUUID();
 
-  if (!idempotencyKey) {
-    return res.status(400).json({
-      error: 'Validation failed',
-      details: ['Idempotency-Key header is required'],
-    });
-  }
+
 
   const requestHash = hashRequestBody(req.body);
   const cached = getIdempotentResponse(idempotencyKey);
@@ -41,5 +37,6 @@ export function idempotencyMiddleware(
 
   req.idempotencyKey = idempotencyKey;
   req.idempotencyBodyHash = requestHash;
+  res.setHeader('Idempotency-Key', idempotencyKey);
   next();
 }

@@ -12,7 +12,7 @@ import type {
 import { validateDonationPayload } from '../validators/donationValidator.js';
 
 function maskCardNumber(cardNumber: string): string {
-  // Mask all but the last four card digits for storage.
+  // Mask all but the last four card digits for storage for security purposes.
   const digits = cardNumber.replace(/\s/g, '');
   const last4 = digits.slice(-4);
   return `**** **** **** ${last4}`;

@@ -6,6 +6,8 @@ import { idempotencyMiddleware } from '../middleware/idempotency.middleware.js';
 
 const router = express.Router();
 
+// The rate limiter is configured with a window of time and a maximum number of requests (max) that can be made within that window.
+//  If the limit is exceeded, a custom error message is returned to the client.
 const donationRateLimiter = rateLimit({
   windowMs: appConfig.rateLimitWindowMs,
   max: appConfig.rateLimitMax,
