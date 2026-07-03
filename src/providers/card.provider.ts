@@ -1,7 +1,7 @@
 import { appConfig } from '../config/app.config.js';
 import type { CardChargeResult, ValidatedDonation } from '../types/donation.types.js';
 import type { CardProvider } from './paymentProvider.types.js';
-import { delay, isFailureAmount } from './shared.js';
+import { delay, isFailureAmount, SIMULATED_FAILURE_MESSAGE } from './shared.js';
 
 export const cardProvider: CardProvider = {
   method: 'card',
@@ -14,7 +14,7 @@ export const cardProvider: CardProvider = {
     if (willFail) {
       return {
         success: false,
-        message: 'Card charge was declined. Please check your details or try another method.',
+        message: SIMULATED_FAILURE_MESSAGE,
       };
     }
 

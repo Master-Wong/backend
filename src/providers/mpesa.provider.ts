@@ -3,7 +3,7 @@ import { appConfig } from '../config/app.config.js';
 import { updateDonationStatus } from '../store/donationStore.store.js';
 import type { MpesaDonation, ValidatedDonation } from '../types/donation.types.js';
 import type { MpesaProvider } from './paymentProvider.types.js';
-import { delay, isFailureAmount } from './shared.js';
+import { delay, isFailureAmount, SIMULATED_FAILURE_MESSAGE } from './shared.js';
 
 async function simulateCallback(
   donationId: string,
@@ -15,7 +15,7 @@ async function simulateCallback(
 
   if (willFail) {
     updateDonationStatus(donationId, 'failed', {
-      failureMessage: 'M-Pesa STK push was declined or timed out. Please try again.',
+      failureMessage: SIMULATED_FAILURE_MESSAGE,
     });
     return;
   }

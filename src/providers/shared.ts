@@ -1,3 +1,6 @@
+export const SIMULATED_FAILURE_MESSAGE =
+  'The request was cancelled to simulate a failed payment response.';
+
 export function isFailureAmount(amount: number): boolean {
   // Treat amounts ending in 1 as simulated payment failures.
   const normalized = Math.floor(Math.abs(Number(amount)));

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cardProvider } from './card.provider.js';
+import { SIMULATED_FAILURE_MESSAGE } from './shared.js';
 
 describe('cardProvider', () => {
   beforeEach(() => {
@@ -46,6 +47,6 @@ describe('cardProvider', () => {
     const result = await promise;
 
     expect(result.success).toBe(false);
-    expect(result.message).toContain('declined');
+    expect(result.message).toBe(SIMULATED_FAILURE_MESSAGE);
   });
 });

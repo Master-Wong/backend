@@ -48,7 +48,7 @@ const swaggerDocument = {
           {
             name: 'Idempotency-Key',
             in: 'header',
-            required: true,
+            required: false,
             schema: { type: 'string', format: 'uuid' },
             description: 'Unique key per payment attempt. Replays return the original response.',
           },
@@ -233,7 +233,10 @@ const swaggerDocument = {
           message: { type: 'string', example: 'Donation received successfully.' },
           donorName: { type: 'string', example: 'Jane Doe' },
           email: { type: 'string', example: 'jane@example.com' },
-          failureMessage: { type: 'string', example: 'M-Pesa STK push was declined or timed out.' },
+          failureMessage: {
+            type: 'string',
+            example: 'The request was cancelled to simulate a failed payment response.',
+          },
         },
       },
       ErrorResponse: {
@@ -251,7 +254,10 @@ const swaggerDocument = {
         type: 'object',
         properties: {
           error: { type: 'string', example: 'Payment failed' },
-          message: { type: 'string', example: 'M-Pesa STK push was declined or timed out. Please try again.' },
+          message: {
+            type: 'string',
+            example: 'The request was cancelled to simulate a failed payment response.',
+          },
         },
       },
       ConflictResponse: {

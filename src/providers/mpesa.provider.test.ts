@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createDonation, getDonation } from '../store/donationStore.store.js';
 import { mpesaProvider } from './mpesa.provider.js';
+import { SIMULATED_FAILURE_MESSAGE } from './shared.js';
 
 function seedDonation(transactionId: string, amount: number) {
   createDonation({
@@ -67,6 +68,6 @@ describe('mpesaProvider', () => {
 
     const donation = getDonation(donationId);
     expect(donation?.status).toBe('failed');
-    expect(donation?.failureMessage).toBeTruthy();
+    expect(donation?.failureMessage).toBe(SIMULATED_FAILURE_MESSAGE);
   });
 });
