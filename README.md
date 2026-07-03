@@ -1,4 +1,4 @@
-# Donations Portal — Backend
+# Donations Portal - Backend
 
 A TypeScript REST API for processing online donations via M-Pesa (async) or card
 (synchronous). Built with Express, it validates every request server-side,

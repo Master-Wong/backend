@@ -9,6 +9,7 @@ async function simulateCallback(
   donationId: string,
   amount: number,
 ): Promise<void> {
+  // Runs in the background after 202 — updates the donation record the client is polling.
   // Simulate M-Pesa STK callback success or failure after a delay.
   const willFail = isFailureAmount(amount);
   await delay(willFail ? appConfig.mpesaFailureDelayMs : appConfig.mpesaCallbackDelayMs);

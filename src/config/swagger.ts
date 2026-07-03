@@ -36,7 +36,7 @@ const swaggerDocument = {
         summary: 'Submit a donation',
         description:
           'Creates a donation resource and processes payment. ' +
-          'M-Pesa is asynchronous: returns 202 with status pending, then resolves via simulated STK callback — poll GET until completed or failed. ' +
+          'M-Pesa is asynchronous: returns 202 with status pending, then resolves via simulated STK callback - poll GET until completed or failed. ' +
           'Card is synchronous: returns 201 on success or 402 on failure. ' +
           'Requires Idempotency-Key header to prevent duplicate charges on retries. ' +
           'Payments fail automatically when the amount ends in 1 (e.g. 1, 11, 501, 1001). ' +

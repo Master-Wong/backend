@@ -64,6 +64,7 @@ function validateMpesaFields(
   body: { phoneNumber?: unknown },
   details: string[],
 ): string | null {
+  // Phone is only required for M-Pesa; we normalize 07… to 2547… before it hits the store.
   // Validate and normalize M-Pesa phone input.
   const { phoneNumber } = body;
 

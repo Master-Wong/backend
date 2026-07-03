@@ -88,6 +88,7 @@ function cacheAndSend(
   body: unknown,
   extraHeaders?: Record<string, string>,
 ): Response {
+  // Writes the response into the idempotency cache before sending — replays must match byte-for-byte.
   // Persist idempotent response then send JSON to the client.
   if (req.idempotencyKey && req.idempotencyBodyHash) {
     saveIdempotentResponse(
@@ -140,6 +141,7 @@ export const sendDonations = async (req: Request, res: Response): Promise<Respon
     });
   }
 
+  // Card is synchronous — we know success or failure in this request, no polling needed.
   const chargeResult = await getCardProvider().charge(donation);
 
   if (!chargeResult.success) {
